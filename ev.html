@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Station Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @keyframes charge-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .charging-pulse {
+            animation: charge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col p-4">
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 rounded-xl p-6 shadow-2xl w-full max-w-sm">
+            <h3 id="modal-title" class="text-xl font-semibold text-white mb-4">Confirm Action</h3>
+            <p id="modal-message" class="text-gray-300 mb-6">Are you sure you want to perform this action?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">Cancel</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard UI -->
+    <div class="container mx-auto p-4 flex-grow">
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">EV Charging Station Admin</h1>
+            <p class="mt-2 text-lg text-gray-400">Manage Battery Deposition, Charging, and Analytics</p>
+            <p id="user-info" class="mt-4 text-sm text-gray-500 font-mono"></p>
+        </header>
+
+        <!-- Stats Section -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                <p class="text-gray-400 text-sm">Total Batteries</p>
+                <p id="total-batteries" class="text-3xl font-bold mt-2 text-white">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                <p class="text-gray-400 text-sm">Type A Batteries</p>
+                <p id="type-a-count" class="text-3xl font-bold mt-2 text-white">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                <p class="text-gray-400 text-sm">Type B Batteries</p>
+                <p id="type-b-count" class="text-3xl font-bold mt-2 text-white">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                <p class="text-gray-400 text-sm">Charging Slots Available</p>
+                <p id="available-slots" class="text-3xl font-bold mt-2 text-green-400">10</p>
+            </div>
+        </div>
+
+        <!-- Charging Stations Section -->
+        <div class="bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-700 mb-8">
+            <h2 class="text-2xl font-semibold mb-6">Charging Stations</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Station 1: Type A -->
+                <div class="bg-gray-900 rounded-2xl p-6 shadow-inner border border-gray-700">
+                    <h3 class="text-xl font-medium mb-4 flex items-center space-x-2">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span>Station 1 (Type A)</span>
+                    </h3>
+                    <div id="station-a-slots" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <!-- Battery slots will be dynamically generated here -->
+                    </div>
+                </div>
+
+                <!-- Station 2: Type B -->
+                <div class="bg-gray-900 rounded-2xl p-6 shadow-inner border border-gray-700">
+                    <h3 class="text-xl font-medium mb-4 flex items-center space-x-2">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 7a2 2 0 100 4 2 2 0 000-4zm4 4a2 2 0 100 4 2 2 0 000-4z"></path>
+                        </svg>
+                        <span>Station 2 (Type B)</span>
+                    </h3>
+                    <div id="station-b-slots" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <!-- Battery slots will be dynamically generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battery Management Section -->
+        <div class="bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-700 mb-8">
+            <h2 class="text-2xl font-semibold mb-6">Battery Management</h2>
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <input type="text" id="battery-id-input" placeholder="Enter Battery ID" class="flex-grow p-3 rounded-xl bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="battery-type-select" class="p-3 rounded-xl bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="TypeA">Type A</option>
+                    <option value="TypeB">Type B</option>
+                </select>
+                <button id="deposit-btn" disabled class="px-6 py-3 bg-green-800 text-white font-medium rounded-xl transition-colors cursor-not-allowed">
+                    Connecting...
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto no-scrollbar rounded-xl">
+                <table class="w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-700 text-left text-gray-400 uppercase text-sm">
+                            <th class="py-3 px-4 rounded-tl-xl">ID</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4">Cycles</th>
+                            <th class="py-3 px-4">Health</th>
+                            <th class="py-3 px-4">Recommendation</th>
+                            <th class="py-3 px-4 rounded-tr-xl">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="battery-table-body" class="divide-y divide-gray-700">
+                        <!-- Battery list will be dynamically generated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        setLogLevel('debug');
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyD7wHd__yHhxTngHsM-n5S3-7NIn1EYLHE",
+            authDomain: "ev-charging-app-58d2c.firebaseapp.com",
+            projectId: "ev-charging-app-58d2c",
+            storageBucket: "ev-charging-app-58d2c.firebasestorage.app",
+            messagingSenderId: "39183071599",
+            appId: "1:39183071599:web:ccdc3e17881649534ed09a"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let db;
+        let auth;
+        let userId = 'loading...';
+
+        const totalBatteriesEl = document.getElementById('total-batteries');
+        const typeACountEl = document.getElementById('type-a-count');
+        const typeBCountEl = document.getElementById('type-b-count');
+        const availableSlotsEl = document.getElementById('available-slots');
+        const stationASlotsEl = document.getElementById('station-a-slots');
+        const stationBSlotsEl = document.getElementById('station-b-slots');
+        const batteryIdInput = document.getElementById('battery-id-input');
+        const batteryTypeSelect = document.getElementById('battery-type-select');
+        const depositBtn = document.getElementById('deposit-btn');
+        const batteryTableBody = document.getElementById('battery-table-body');
+        const userInfoEl = document.getElementById('user-info');
+        
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+        // State
+        const MAX_SLOTS = 10;
+        let batteryData = [];
+        let stationAData = [];
+        let stationBData = [];
+        let stations = {
+            'TypeA': { id: 'station-a', slots: [] },
+            'TypeB': { id: 'station-b', slots: [] }
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        // Sign in anonymously or with custom token
+        const handleAuth = async () => {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase auth error:", error);
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                userInfoEl.textContent = `Authenticated User ID: ${userId}`;
+                depositBtn.disabled = false;
+                depositBtn.classList.remove('bg-green-800', 'cursor-not-allowed');
+                depositBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                depositBtn.textContent = 'Deposit Battery';
+                startRealtimeListeners();
+            } else {
+                userInfoEl.textContent = `Not authenticated. Attempting anonymous sign-in...`;
+                handleAuth();
+            }
+        });
+
+        // Show confirmation modal
+        const showModal = (title, message, onConfirm) => {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            confirmationModal.classList.remove('hidden');
+
+            const confirmHandler = () => {
+                onConfirm();
+                confirmationModal.classList.add('hidden');
+                modalConfirmBtn.removeEventListener('click', confirmHandler);
+            };
+
+            const cancelHandler = () => {
+                confirmationModal.classList.add('hidden');
+                modalConfirmBtn.removeEventListener('click', cancelHandler);
+            };
+
+            modalConfirmBtn.addEventListener('click', confirmHandler);
+            modalCancelBtn.addEventListener('click', cancelHandler);
+        };
+
+        // Render functions
+        const renderDashboard = () => {
+            totalBatteriesEl.textContent = batteryData.length;
+            typeACountEl.textContent = batteryData.filter(b => b.type === 'TypeA').length;
+            typeBCountEl.textContent = batteryData.filter(b => b.type === 'TypeB').length;
+            
+            const chargingBatteries = batteryData.filter(b => b.isCharging).length;
+            availableSlotsEl.textContent = MAX_SLOTS - chargingBatteries;
+        };
+
+        const renderStations = () => {
+            stationASlotsEl.innerHTML = '';
+            stationBSlotsEl.innerHTML = '';
+
+            const stationAChargers = batteryData.filter(b => b.type === 'TypeA' && b.status !== 'withdrawn');
+            const stationBChargers = batteryData.filter(b => b.type === 'TypeB' && b.status !== 'withdrawn');
+            
+            // This is a simulated charge percentage for the demo
+            const getSimulatedCharge = (id) => {
+                const now = new Date().getTime();
+                const randomSeed = id.charCodeAt(0) + id.charCodeAt(id.length - 1);
+                const chargeOffset = (now / 1000 + randomSeed) % 100;
+                return Math.min(100, 1 + Math.floor(chargeOffset));
+            };
+
+            const renderSlot = (battery) => {
+                let statusColor = 'bg-gray-700';
+                let statusText = 'Available';
+                let chargeProgress = 0;
+                let progressBar = '';
+                
+                if (battery) {
+                    if (battery.isCharging) {
+                        statusColor = 'bg-yellow-600 charging-pulse';
+                        statusText = 'Charging';
+                        chargeProgress = getSimulatedCharge(battery.id);
+                        progressBar = `<div class="absolute inset-0 bg-yellow-500 rounded-lg transition-all duration-300 ease-out" style="width: ${chargeProgress}%;"></div>`;
+                    } else if (battery.status === 'ready') {
+                        statusColor = 'bg-green-600';
+                        statusText = 'Ready';
+                    } else if (battery.status === 'in-station') {
+                         statusColor = 'bg-gray-500';
+                         statusText = 'Deposited';
+                    }
+                }
+                
+                return `
+                    <div class="bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700">
+                        <div class="relative w-full h-10 ${statusColor} rounded-lg mb-2 overflow-hidden">
+                            ${progressBar}
+                            <div class="relative z-10 w-full h-full flex items-center justify-center text-sm font-bold text-black bg-opacity-50">
+                                ${battery && battery.isCharging ? `${chargeProgress}%` : ''}
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 truncate">${battery ? `ID: ${battery.id}` : 'Empty Slot'}</p>
+                        <p class="text-sm font-semibold text-center mt-1">${statusText}</p>
+                    </div>
+                `;
+            };
+
+            for(let i=0; i < MAX_SLOTS/2; i++){
+                stationASlotsEl.innerHTML += renderSlot(stationAChargers[i]);
+                stationBSlotsEl.innerHTML += renderSlot(stationBChargers[i]);
+            }
+        };
+
+        const renderBatteryTable = () => {
+            batteryTableBody.innerHTML = '';
+            batteryData.forEach(battery => {
+                const row = document.createElement('tr');
+                row.className = "bg-gray-800 hover:bg-gray-700 transition-colors";
+
+                let healthColor = 'text-green-400';
+                if (battery.healthScore < 30) {
+                    healthColor = 'text-red-400';
+                } else if (battery.healthScore < 70) {
+                    healthColor = 'text-yellow-400';
+                }
+                
+                let recommendationClass = battery.recommendation ? 'bg-indigo-700' : 'bg-transparent';
+
+                row.innerHTML = `
+                    <td class="py-3 px-4 font-mono truncate rounded-l-xl">${battery.id}</td>
+                    <td class="py-3 px-4">${battery.type}</td>
+                    <td class="py-3 px-4 capitalize">${battery.status}</td>
+                    <td class="py-3 px-4">${battery.chargingCycles}</td>
+                    <td class="py-3 px-4 font-bold ${healthColor}">${battery.healthScore}%</td>
+                    <td class="py-3 px-4">
+                        <span class="text-xs font-medium px-2 py-1 rounded-full ${recommendationClass}">
+                            ${battery.recommendation || 'N/A'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 rounded-r-xl">
+                        <div class="flex items-center space-x-2">
+                            ${battery.status === 'in-station' ?
+                                `<button data-id="${battery.id}" class="action-btn start-charging-btn px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs transition-colors">Charge</button>` : ''
+                            }
+                            ${battery.status === 'charging' ?
+                                `<button data-id="${battery.id}" class="action-btn stop-charging-btn px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-xs transition-colors">Stop</button>` : ''
+                            }
+                            ${battery.status === 'ready' || battery.status === 'in-station' ?
+                                `<button data-id="${battery.id}" class="action-btn withdraw-btn px-3 py-1 bg-green-600 hover:bg-green-700 rounded-lg text-xs transition-colors">Withdraw</button>` : ''
+                            }
+                            ${battery.status !== 'charging' ?
+                                `<button data-id="${battery.id}" class="action-btn delete-btn px-3 py-1 bg-gray-500 hover:bg-gray-600 rounded-lg text-xs transition-colors">Delete</button>` : ''
+                            }
+                        </div>
+                    </td>
+                `;
+                batteryTableBody.appendChild(row);
+            });
+            attachActionListeners();
+        };
+
+        const attachActionListeners = () => {
+            document.querySelectorAll('.start-charging-btn').forEach(button => {
+                button.addEventListener('click', () => startCharging(button.dataset.id));
+            });
+            document.querySelectorAll('.stop-charging-btn').forEach(button => {
+                button.addEventListener('click', () => stopCharging(button.dataset.id));
+            });
+            document.querySelectorAll('.withdraw-btn').forEach(button => {
+                button.addEventListener('click', () => showModal(
+                    'Withdraw Battery',
+                    `Are you sure you want to withdraw battery ${button.dataset.id}?`,
+                    () => withdrawBattery(button.dataset.id)
+                ));
+            });
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', () => showModal(
+                    'Delete Battery',
+                    `This will permanently delete battery ${button.dataset.id}. Are you sure?`,
+                    () => deleteBattery(button.dataset.id)
+                ));
+            });
+        };
+
+        // ML Analysis and Recommendation (Simulated)
+        const analyzeBattery = (battery) => {
+            let healthScore = 100;
+            let recommendation = '';
+
+            // Simple degradation based on cycles
+            healthScore -= Math.min(battery.chargingCycles * 5, 50);
+
+            // Time-based degradation
+            const timeChargedMinutes = battery.totalChargingTime / 60000;
+            healthScore -= Math.min(Math.floor(timeChargedMinutes / 10) * 2, 50);
+
+            // Add recommendations based on health score
+            if (healthScore < 30) {
+                recommendation = '⚠️ Replace Soon';
+            } else if (healthScore < 70) {
+                recommendation = '🟡 Monitor Health';
+            } else {
+                recommendation = '🟢 Good Health';
+            }
+            
+            return { healthScore, recommendation };
+        };
+
+        // Firestore Actions
+        const getBatteryDocRef = (id) => {
+             return doc(db, `artifacts/${appId}/public/data/batteries`, id);
+        }
+
+        const depositBattery = async () => {
+            const id = batteryIdInput.value.trim();
+            const type = batteryTypeSelect.value;
+            if (!id) return;
+
+            const batteryRef = getBatteryDocRef(id);
+            const batterySnap = await getDoc(batteryRef);
+
+            if (batterySnap.exists()) {
+                showModal(
+                    'Battery Exists',
+                    `Battery with ID "${id}" is already in the system.`,
+                    () => {}
+                );
+                return;
+            }
+
+            const newBattery = {
+                id: id,
+                type: type,
+                status: 'in-station',
+                isCharging: false,
+                lastDeposit: Timestamp.now(),
+                chargingCycles: 0,
+                totalChargingTime: 0,
+                healthScore: 100,
+                recommendation: '🟢 Good Health'
+            };
+            
+            try {
+                await setDoc(getBatteryDocRef(id), newBattery);
+                batteryIdInput.value = '';
+            } catch (e) {
+                console.error("Error depositing battery: ", e);
+            }
+        };
+
+        const startCharging = async (id) => {
+            try {
+                const batteryDocRef = getBatteryDocRef(id);
+                await updateDoc(batteryDocRef, {
+                    isCharging: true,
+                    status: 'charging'
+                });
+            } catch (e) {
+                console.error("Error starting charge: ", e);
+            }
+        };
+
+        const stopCharging = async (id) => {
+            try {
+                const batteryDocRef = getBatteryDocRef(id);
+                await updateDoc(batteryDocRef, {
+                    isCharging: false,
+                    status: 'ready'
+                });
+            } catch (e) {
+                console.error("Error stopping charge: ", e);
+            }
+        };
+
+        const withdrawBattery = async (id) => {
+            try {
+                const batteryRef = getBatteryDocRef(id);
+                const batteryDoc = await getDoc(batteryRef);
+                const battery = batteryDoc.data();
+
+                const chargingTime = battery.isCharging ? 
+                    Timestamp.now().toMillis() - battery.lastDeposit.toMillis() : 0;
+                
+                const updatedCycles = battery.chargingCycles + 1;
+                const updatedTotalTime = battery.totalChargingTime + chargingTime;
+                
+                const updatedBattery = {
+                    ...battery,
+                    status: 'withdrawn',
+                    isCharging: false,
+                    lastDeposit: null,
+                    chargingCycles: updatedCycles,
+                    totalChargingTime: updatedTotalTime
+                };
+                
+                const { healthScore, recommendation } = analyzeBattery(updatedBattery);
+
+                await updateDoc(batteryRef, {
+                    status: 'withdrawn',
+                    isCharging: false,
+                    lastDeposit: null,
+                    chargingCycles: updatedCycles,
+                    totalChargingTime: updatedTotalTime,
+                    healthScore: healthScore,
+                    recommendation: recommendation
+                });
+            } catch (e) {
+                console.error("Error withdrawing battery: ", e);
+            }
+        };
+
+        const deleteBattery = async (id) => {
+            try {
+                await deleteDoc(getBatteryDocRef(id));
+            } catch (e) {
+                console.error("Error deleting battery: ", e);
+            }
+        };
+        
+        // Real-time listener
+        const startRealtimeListeners = () => {
+            const batteriesColRef = collection(db, `artifacts/${appId}/public/data/batteries`);
+            onSnapshot(batteriesColRef, (snapshot) => {
+                batteryData = snapshot.docs.map(doc => doc.data());
+                renderDashboard();
+                renderStations();
+                renderBatteryTable();
+            }, (error) => {
+                console.error("Error listening to Firestore:", error);
+            });
+        };
+
+        // Event listeners
+        depositBtn.addEventListener('click', depositBattery);
+    </script>
+</body>
+</html>
